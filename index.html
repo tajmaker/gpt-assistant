@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>GPT Monitoring</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #f0f0f0;
+    }
+    input[type="text"] {
+      width: 300px;
+      padding: 5px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>GPT Monitoring</h1>
+
+  <div style="margin-bottom: 15px;">
+  <input type="text" id="search" placeholder="Поиск по промптам..." oninput="filterLogs()">
+
+  <select id="modelSelect" onchange="filterLogs()">
+    <option value="">Все модели</option>
+  </select>
+
+  <label for="fromDate">от</label>
+  <input type="date" id="fromDate" onchange="filterLogs()">
+
+  <label for="toDate">до</label>
+  <input type="date" id="toDate" onchange="filterLogs()">
+</div>
+
+
+  <table id="logTable">
+    <thead>
+      <tr>
+        <th>Дата</th>
+        <th>Модель</th>
+        <th>Промпт</th>
+        <th>Ответ</th>
+        <th>Токены</th>
+        <th>Время (сек)</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <h2>График токенов</h2>
+  <canvas id="tokenChart" height="100"></canvas>
+
+  <script>
+    let allLogs = []
+
+    function renderLogs(logs) {
+      const table = document.querySelector("#logTable tbody")
+      table.innerHTML = ""
+
+      logs.forEach(log => {
+        const row = document.createElement("tr")
+        row.innerHTML = `
+          <td>${new Date(log.date).toLocaleString()}</td>
+          <td>${log.model}</td>
+          <td>${log.prompt.slice(0, 150)}...</td>
+          <td>${log.response.slice(0, 150)}...</td>
+          <td>${log.tokens}</td>
+          <td>${log.duration_sec}</td>
+        `
+        table.appendChild(row)
+      })
+
+      // График токенов
+      const ctx = document.getElementById("tokenChart").getContext("2d")
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: logs.map(log => new Date(log.date).toLocaleString()),
+          datasets: [{
+            label: 'Количество токенов',
+            data: logs.map(log => log.tokens),
+            borderColor: 'blue',
+            fill: false,
+            tension: 0.2
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { position: 'top' },
+            title: { display: false }
+          },
+          scales: {
+            x: { title: { display: true, text: 'Дата' }},
+            y: { title: { display: true, text: 'Токены' }}
+          }
+        }
+      })
+    }
+
+    function filterLogs() {
+  const q = document.getElementById("search").value.toLowerCase()
+  const model = document.getElementById("modelSelect").value
+  const fromDate = document.getElementById("fromDate").value
+  const toDate = document.getElementById("toDate").value
+
+  const filtered = allLogs.filter(log => {
+    const promptMatch = log.prompt.toLowerCase().includes(q)
+    const modelMatch = model === "" || log.model === model
+
+    const logDate = new Date(log.date)
+    const fromMatch = !fromDate || logDate >= new Date(fromDate)
+    const toMatch = !toDate || logDate <= new Date(toDate + 'T23:59:59')
+
+    return promptMatch && modelMatch && fromMatch && toMatch
+  })
+
+  renderLogs(filtered)
+}
+
+
+    fetch('http://localhost:3001/api/logs')
+      .then(res => res.json())
+      .then(data => {
+        allLogs = data.reverse()
+        renderLogs(allLogs)
+        const modelSet = new Set(allLogs.map(log => log.model))
+    const select = document.getElementById("modelSelect")
+    modelSet.forEach(model => {
+      const option = document.createElement("option")
+      option.value = model
+      option.textContent = model
+      select.appendChild(option)
+    })
+  })
+      
+  </script>
+</body>
+</html>

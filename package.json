@@ -1,0 +1,21 @@
+{
+  "name": "gpt-assistant",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@fastify/cors": "^11.0.1",
+    "axios": "^1.10.0",
+    "dotenv": "^17.0.0",
+    "fastify": "^5.4.0",
+    "fastify-cors": "^6.0.3",
+    "openai": "^5.8.2",
+    "pg": "^8.16.3"
+  }
+}
